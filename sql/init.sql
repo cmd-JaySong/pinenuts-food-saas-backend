@@ -134,8 +134,67 @@ INSERT INTO `sys_role_permission` (`role_id`, `permission_id`) VALUES
 INSERT INTO `sys_role_permission` (`role_id`, `permission_id`) VALUES
 (3,1),(3,3),(3,4),(3,20),(3,30);
 
+-- ============================================
+-- Week 3: 门店与员工管理
+-- ============================================
+
+-- 门店表
+CREATE TABLE IF NOT EXISTS `t_store` (
+  `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+  `tenant_id` BIGINT NOT NULL,
+  `store_code` VARCHAR(50) NOT NULL COMMENT '门店编号',
+  `store_name` VARCHAR(100) NOT NULL COMMENT '门店名称',
+  `address` VARCHAR(255) COMMENT '门店地址',
+  `contact_phone` VARCHAR(20) COMMENT '联系电话',
+  `business_hours` VARCHAR(100) COMMENT '营业时间',
+  `status` TINYINT DEFAULT 1 COMMENT '状态：1-营业中 0-停业',
+  `deleted` TINYINT DEFAULT 0,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_tenant_store_code` (`tenant_id`, `store_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='门店表';
+
+-- 员工表
+CREATE TABLE IF NOT EXISTS `t_staff` (
+  `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+  `tenant_id` BIGINT NOT NULL,
+  `store_id` BIGINT NOT NULL COMMENT '所属门店',
+  `user_id` BIGINT COMMENT '关联系统用户（可选）',
+  `staff_name` VARCHAR(50) NOT NULL COMMENT '员工姓名',
+  `phone` VARCHAR(20) COMMENT '手机号',
+  `position` VARCHAR(50) COMMENT '职位',
+  `entry_date` DATE COMMENT '入职日期',
+  `status` TINYINT DEFAULT 1 COMMENT '状态：1-在职 0-离职',
+  `deleted` TINYINT DEFAULT 0,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_store_id` (`store_id`),
+  UNIQUE KEY `uk_tenant_store_phone` (`tenant_id`, `store_id`, `phone`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='员工表';
+
+-- 调整菜单排序：为员工管理腾出位置（插入到门店管理之后）
+UPDATE `sys_permission` SET `sort_order` = `sort_order` + 1 WHERE `type` = 1 AND `sort_order` >= 3 AND `parent_id` = 0;
+
+-- 员工管理顶级菜单
+INSERT INTO `sys_permission` (`id`, `parent_id`, `permission_code`, `permission_name`, `type`, `path`, `icon`, `sort_order`, `status`, `deleted`) VALUES
+(8, 0, 'staff', '员工管理', 1, '/staff', 'User', 3, 1, 0);
+
+-- 员工管理子权限
+INSERT INTO `sys_permission` (`id`, `parent_id`, `permission_code`, `permission_name`, `type`, `path`, `icon`, `sort_order`, `status`, `deleted`) VALUES
+(14, 8, 'staff:list', '查看员工', 2, NULL, NULL, 1, 1, 0),
+(15, 8, 'staff:create', '新增员工', 2, NULL, NULL, 2, 1, 0),
+(16, 8, 'staff:update', '编辑员工', 2, NULL, NULL, 3, 1, 0),
+(17, 8, 'staff:delete', '删除员工', 2, NULL, NULL, 4, 1, 0);
+
+-- 为超级管理员角色分配员工管理权限
+INSERT INTO `sys_role_permission` (`role_id`, `permission_id`) VALUES
+(1, 8), (1, 14), (1, 15), (1, 16), (1, 17);
+
+-- 为门店管理员角色分配员工管理权限
+INSERT INTO `sys_role_permission` (`role_id`, `permission_id`) VALUES
+(2, 8), (2, 14), (2, 15), (2, 16), (2, 17);
+
 -- 后续周次将在此添加表结构
--- Week 3: 门店表、员工表
 -- Week 4: 菜品分类表、菜品表
 -- Week 5: 库存表、库存流水表
 -- Week 6: 采购单表、审批日志表

@@ -18,7 +18,11 @@ public enum ResultCode {
     TOKEN_INVALID(401, "Token 无效"),
     TOKEN_EXPIRED(401, "Token 已过期"),
     ACCOUNT_DISABLED(403, "账号已被禁用"),
-    PERMISSION_DENIED(403, "权限不足");
+    PERMISSION_DENIED(403, "权限不足"),
+
+    STORE_NOT_FOUND(404, "门店不存在"),
+    STORE_CODE_DUPLICATE(400, "门店编号已存在"),
+    STAFF_NOT_FOUND(404, "员工不存在");
 
     private final int code;
     private final String message;
