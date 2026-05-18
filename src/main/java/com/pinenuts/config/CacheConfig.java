@@ -46,6 +46,7 @@ public class CacheConfig {
         Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
         cacheConfigurations.put("dish", defaultConfig.entryTtl(Duration.ofMinutes(30)));
         cacheConfigurations.put("dishCategory", defaultConfig.entryTtl(Duration.ofHours(2)));
+        cacheConfigurations.put("inventory", defaultConfig.entryTtl(Duration.ofMinutes(30)));
 
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(defaultConfig)

@@ -25,7 +25,11 @@ public class MyBatisPlusConfig {
             @Override
             public Expression getTenantId() {
                 Long tenantId = TenantContext.getTenantId();
-                return new LongValue(tenantId != null ? tenantId : 0L);
+                if (tenantId == null) {
+                    // 定时任务等无请求上下文场景，返回 NullValue 配合 ignoreTable 处理
+                    return new LongValue(0L);
+                }
+                return new LongValue(tenantId);
             }
 
             @Override
@@ -36,7 +40,11 @@ public class MyBatisPlusConfig {
             @Override
             public boolean ignoreTable(String tableName) {
                 // 这些表不需要租户过滤
-                return List.of("sys_permission", "sys_user_role", "sys_role_permission").contains(tableName);
+                if (List.of("sys_permission", "sys_user_role", "sys_role_permission").contains(tableName)) {
+                    return true;
+                }
+                // 定时任务等无请求上下文场景，跳过租户过滤
+                return TenantContext.getTenantId() == null;
             }
         }));
 

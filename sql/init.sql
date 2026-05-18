@@ -194,11 +194,6 @@ INSERT INTO `sys_role_permission` (`role_id`, `permission_id`) VALUES
 INSERT INTO `sys_role_permission` (`role_id`, `permission_id`) VALUES
 (2, 8), (2, 14), (2, 15), (2, 16), (2, 17);
 
--- 后续周次将在此添加表结构
--- Week 5: 库存表、库存流水表
--- Week 6: 采购单表、审批日志表
--- Week 7: 销售记录表
-
 -- ============================================
 -- Week 4: 菜品管理
 -- ============================================
@@ -238,3 +233,76 @@ CREATE TABLE IF NOT EXISTS t_dish (
 
 -- 更新菜品管理菜单路径
 UPDATE sys_permission SET path = '/dish' WHERE permission_code = 'dish' AND type = 1;
+
+-- ============================================
+-- Week 5: 库存管理
+-- ============================================
+
+-- 库存物料表
+CREATE TABLE IF NOT EXISTS `t_inventory_item` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `tenant_id` BIGINT NOT NULL COMMENT '租户ID',
+    `store_id` BIGINT NOT NULL COMMENT '所属门店ID',
+    `item_name` VARCHAR(100) NOT NULL COMMENT '物料名称',
+    `item_code` VARCHAR(50) NOT NULL COMMENT '物料编码',
+    `category` VARCHAR(50) DEFAULT NULL COMMENT '物料分类（蔬菜/肉类/调味品/粮油等）',
+    `unit` VARCHAR(20) NOT NULL COMMENT '计量单位（斤/个/瓶/箱）',
+    `quantity` DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT '当前库存量',
+    `cost_price` DECIMAL(10,2) DEFAULT NULL COMMENT '成本单价',
+    `alert_threshold` DECIMAL(10,2) DEFAULT NULL COMMENT '预警阈值',
+    `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态 1-正常 0-停用',
+    `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除 0-未删除 1-已删除',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY `uk_tenant_store_code` (`tenant_id`, `store_id`, `item_code`, `deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='库存物料表';
+
+-- 库存流水表
+CREATE TABLE IF NOT EXISTS `t_inventory_flow` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `tenant_id` BIGINT NOT NULL COMMENT '租户ID',
+    `store_id` BIGINT NOT NULL COMMENT '门店ID',
+    `item_id` BIGINT NOT NULL COMMENT '关联库存物料ID',
+    `flow_type` TINYINT NOT NULL COMMENT '流水类型 1-入库 2-出库 3-盘点调整',
+    `source_type` VARCHAR(30) DEFAULT NULL COMMENT '来源类型（purchase_in/manual_in/sale_out/loss_out/check_adjust）',
+    `quantity` DECIMAL(10,2) NOT NULL COMMENT '变动数量（正数入/负数出）',
+    `before_quantity` DECIMAL(10,2) NOT NULL COMMENT '变动前库存',
+    `after_quantity` DECIMAL(10,2) NOT NULL COMMENT '变动后库存',
+    `operator_id` BIGINT DEFAULT NULL COMMENT '操作人ID',
+    `operator_name` VARCHAR(50) DEFAULT NULL COMMENT '操作人姓名',
+    `remark` VARCHAR(255) DEFAULT NULL COMMENT '备注',
+    `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除 0-未删除 1-已删除',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    KEY `idx_item_id` (`item_id`),
+    KEY `idx_store_id` (`store_id`),
+    KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='库存流水表';
+
+-- 库存预警记录表
+CREATE TABLE IF NOT EXISTS `t_inventory_alert` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `tenant_id` BIGINT NOT NULL COMMENT '租户ID',
+    `store_id` BIGINT NOT NULL COMMENT '门店ID',
+    `item_id` BIGINT NOT NULL COMMENT '关联库存物料ID',
+    `item_name` VARCHAR(100) NOT NULL COMMENT '物料名称',
+    `current_quantity` DECIMAL(10,2) NOT NULL COMMENT '当前库存量',
+    `alert_threshold` DECIMAL(10,2) NOT NULL COMMENT '预警阈值',
+    `status` TINYINT NOT NULL DEFAULT 0 COMMENT '0-未处理 1-已处理',
+    `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除 0-未删除 1-已删除',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    KEY `idx_item_id` (`item_id`),
+    KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='库存预警记录表';
+
+-- 补充库存预警权限
+INSERT INTO `sys_permission` (`id`, `parent_id`, `permission_code`, `permission_name`, `type`, `path`, `icon`, `sort_order`) VALUES
+(33, 4, 'inventory:alert', '库存预警', 2, NULL, NULL, 4);
+
+-- 给超级管理员和门店管理员分配库存预警权限
+INSERT INTO `sys_role_permission` (`role_id`, `permission_id`) VALUES (1, 33), (2, 33);
+
+-- 后续周次将在此添加表结构
+-- Week 6: 采购单表、审批日志表
+-- Week 7: 销售记录表

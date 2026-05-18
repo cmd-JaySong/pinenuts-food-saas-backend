@@ -31,7 +31,14 @@ public enum ResultCode {
     CATEGORY_HAS_CHILDREN(400, "该分类下存在子分类，无法删除"),
     CATEGORY_HAS_DISHES(400, "该分类下存在菜品，无法删除"),
     FILE_UPLOAD_FAILED(500, "文件上传失败"),
-    FILE_TYPE_NOT_ALLOWED(400, "不支持的文件类型");
+    FILE_TYPE_NOT_ALLOWED(400, "不支持的文件类型"),
+
+    // 库存相关 5xxx
+    INVENTORY_NOT_FOUND(5001, "库存物料不存在"),
+    INVENTORY_INSUFFICIENT(5002, "库存不足，无法出库"),
+    INVENTORY_CODE_DUPLICATE(5003, "物料编码已存在"),
+    INVENTORY_CANNOT_DELETE(5004, "库存量不为零，无法删除"),
+    INVENTORY_ALERT_NOT_FOUND(5005, "预警记录不存在");
 
     private final int code;
     private final String message;
