@@ -10,6 +10,10 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
       database: 0
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
@@ -27,3 +31,10 @@ jwt:
   secret: pinenuts-food-saas-jwt-secret-key-2026-this-must-be-at-least-256-bits-long-for-hs256
   access-token-expiration: 1800000
   refresh-token-expiration: 604800000
+
+# 文件上传配置
+file:
+  upload:
+    path: ${FILE_UPLOAD_PATH:./uploads}
+    url-prefix: /uploads
+    allowed-types: image/jpeg,image/png,image/gif,image/webp

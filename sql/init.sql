@@ -195,7 +195,46 @@ INSERT INTO `sys_role_permission` (`role_id`, `permission_id`) VALUES
 (2, 8), (2, 14), (2, 15), (2, 16), (2, 17);
 
 -- 后续周次将在此添加表结构
--- Week 4: 菜品分类表、菜品表
 -- Week 5: 库存表、库存流水表
 -- Week 6: 采购单表、审批日志表
 -- Week 7: 销售记录表
+
+-- ============================================
+-- Week 4: 菜品管理
+-- ============================================
+
+-- 菜品分类表（支持递归树）
+CREATE TABLE IF NOT EXISTS t_dish_category (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  tenant_id BIGINT NOT NULL,
+  parent_id BIGINT DEFAULT 0 COMMENT '父分类ID，0为顶级',
+  category_name VARCHAR(50) NOT NULL COMMENT '分类名称',
+  sort_order INT DEFAULT 0 COMMENT '排序',
+  status TINYINT DEFAULT 1 COMMENT '状态：1-启用 0-禁用',
+  deleted TINYINT DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_tenant_parent_name (tenant_id, parent_id, category_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='菜品分类表';
+
+-- 菜品表
+CREATE TABLE IF NOT EXISTS t_dish (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  tenant_id BIGINT NOT NULL,
+  category_id BIGINT NOT NULL COMMENT '所属分类',
+  dish_name VARCHAR(100) NOT NULL COMMENT '菜品名称',
+  dish_code VARCHAR(50) COMMENT '菜品编号',
+  price DECIMAL(10,2) NOT NULL COMMENT '价格',
+  image_url VARCHAR(500) COMMENT '菜品图片URL',
+  description VARCHAR(500) COMMENT '菜品描述',
+  specifications JSON COMMENT '规格信息JSON',
+  status TINYINT DEFAULT 1 COMMENT '状态：1-上架 0-下架',
+  deleted TINYINT DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_category_id (category_id),
+  INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='菜品表';
+
+-- 更新菜品管理菜单路径
+UPDATE sys_permission SET path = '/dish' WHERE permission_code = 'dish' AND type = 1;

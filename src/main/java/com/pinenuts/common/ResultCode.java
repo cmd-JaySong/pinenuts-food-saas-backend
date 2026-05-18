@@ -22,7 +22,16 @@ public enum ResultCode {
 
     STORE_NOT_FOUND(404, "门店不存在"),
     STORE_CODE_DUPLICATE(400, "门店编号已存在"),
-    STAFF_NOT_FOUND(404, "员工不存在");
+    STAFF_NOT_FOUND(404, "员工不存在"),
+
+    DISH_NOT_FOUND(404, "菜品不存在"),
+    DISH_CODE_DUPLICATE(400, "菜品编号已存在"),
+    CATEGORY_NOT_FOUND(404, "分类不存在"),
+    CATEGORY_NAME_DUPLICATE(400, "分类名称已存在"),
+    CATEGORY_HAS_CHILDREN(400, "该分类下存在子分类，无法删除"),
+    CATEGORY_HAS_DISHES(400, "该分类下存在菜品，无法删除"),
+    FILE_UPLOAD_FAILED(500, "文件上传失败"),
+    FILE_TYPE_NOT_ALLOWED(400, "不支持的文件类型");
 
     private final int code;
     private final String message;
