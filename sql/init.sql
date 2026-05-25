@@ -303,6 +303,73 @@ INSERT INTO `sys_permission` (`id`, `parent_id`, `permission_code`, `permission_
 -- 给超级管理员和门店管理员分配库存预警权限
 INSERT INTO `sys_role_permission` (`role_id`, `permission_id`) VALUES (1, 33), (2, 33);
 
+-- ===================== 第六周：采购管理 =====================
+
+-- 采购单主表
+CREATE TABLE IF NOT EXISTS `t_purchase_order` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `tenant_id` BIGINT NOT NULL COMMENT '租户ID',
+    `store_id` BIGINT NOT NULL COMMENT '门店ID',
+    `purchase_code` VARCHAR(50) NOT NULL COMMENT '采购单号（系统生成）',
+    `status` TINYINT NOT NULL DEFAULT 0 COMMENT '0-草稿 1-待审批 2-已完成 3-已驳回',
+    `total_amount` DECIMAL(12,2) DEFAULT 0.00 COMMENT '采购总金额',
+    `remark` VARCHAR(500) DEFAULT NULL COMMENT '申请备注',
+    `applicant_id` BIGINT NOT NULL COMMENT '申请人ID',
+    `applicant_name` VARCHAR(50) NOT NULL COMMENT '申请人姓名',
+    `approver_id` BIGINT DEFAULT NULL COMMENT '审批人ID',
+    `approver_name` VARCHAR(50) DEFAULT NULL COMMENT '审批人姓名',
+    `approval_time` DATETIME DEFAULT NULL COMMENT '审批时间',
+    `approval_remark` VARCHAR(500) DEFAULT NULL COMMENT '审批意见',
+    `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY `uk_tenant_purchase_code` (`tenant_id`, `purchase_code`),
+    KEY `idx_store_id` (`store_id`),
+    KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='采购单主表';
+
+-- 采购明细表
+CREATE TABLE IF NOT EXISTS `t_purchase_order_item` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `tenant_id` BIGINT NOT NULL COMMENT '租户ID',
+    `order_id` BIGINT NOT NULL COMMENT '关联采购单ID',
+    `item_id` BIGINT DEFAULT NULL COMMENT '关联库存物料ID（可为空，表示新物料）',
+    `item_name` VARCHAR(100) NOT NULL COMMENT '物料名称（冗余存储）',
+    `unit` VARCHAR(20) NOT NULL COMMENT '单位',
+    `quantity` DECIMAL(10,2) NOT NULL COMMENT '采购数量',
+    `unit_price` DECIMAL(10,2) DEFAULT NULL COMMENT '单价',
+    `total_price` DECIMAL(12,2) DEFAULT NULL COMMENT '小计',
+    `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    KEY `idx_order_id` (`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='采购明细表';
+
+-- 采购审批日志表
+CREATE TABLE IF NOT EXISTS `t_purchase_approval_log` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `tenant_id` BIGINT NOT NULL COMMENT '租户ID',
+    `order_id` BIGINT NOT NULL COMMENT '关联采购单ID',
+    `action` TINYINT NOT NULL COMMENT '1-创建 2-提交审批 3-撤回 4-审批通过 5-审批驳回',
+    `operator_id` BIGINT NOT NULL COMMENT '操作人ID',
+    `operator_name` VARCHAR(50) NOT NULL COMMENT '操作人姓名',
+    `remark` VARCHAR(500) DEFAULT NULL COMMENT '操作备注',
+    `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    KEY `idx_order_id` (`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='采购审批日志表';
+
+-- 补充采购操作权限
+INSERT IGNORE INTO `sys_permission` (`id`, `parent_id`, `permission_code`, `permission_name`, `type`, `path`, `icon`, `sort_order`) VALUES
+(43, 5, 'purchase:submit', '提交审批', 2, NULL, NULL, 3),
+(44, 5, 'purchase:withdraw', '撤回申请', 2, NULL, NULL, 4),
+(45, 5, 'purchase:delete', '删除采购单', 2, NULL, NULL, 5);
+
+-- 为超级管理员和门店管理员分配新增的采购权限
+INSERT IGNORE INTO `sys_role_permission` (`role_id`, `permission_id`) VALUES
+(1, 43), (1, 44), (1, 45),
+(2, 40), (2, 41), (2, 42), (2, 43), (2, 44), (2, 45);
+
 -- 后续周次将在此添加表结构
--- Week 6: 采购单表、审批日志表
 -- Week 7: 销售记录表
