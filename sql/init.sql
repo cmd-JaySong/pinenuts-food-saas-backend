@@ -371,5 +371,161 @@ INSERT IGNORE INTO `sys_role_permission` (`role_id`, `permission_id`) VALUES
 (1, 43), (1, 44), (1, 45),
 (2, 40), (2, 41), (2, 42), (2, 43), (2, 44), (2, 45);
 
--- 后续周次将在此添加表结构
+-- ========================================
 -- Week 7: 销售记录表
+-- ========================================
+
+CREATE TABLE IF NOT EXISTS t_sales_order (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  tenant_id BIGINT NOT NULL COMMENT '租户ID',
+  store_id BIGINT NOT NULL COMMENT '门店ID',
+  order_no VARCHAR(32) NOT NULL COMMENT '订单号',
+  total_amount DECIMAL(10,2) NOT NULL COMMENT '订单总金额',
+  item_count INT NOT NULL DEFAULT 0 COMMENT '菜品项数',
+  payment_method VARCHAR(20) COMMENT '支付方式(cash/wechat/alipay)',
+  order_time DATETIME NOT NULL COMMENT '下单时间',
+  created_at DATETIME DEFAULT NULL,
+  updated_at DATETIME DEFAULT NULL,
+  deleted TINYINT DEFAULT 0,
+  INDEX idx_tenant_store (tenant_id, store_id),
+  INDEX idx_order_time (order_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='销售订单表';
+
+CREATE TABLE IF NOT EXISTS t_sales_order_item (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  tenant_id BIGINT NOT NULL COMMENT '租户ID',
+  order_id BIGINT NOT NULL COMMENT '订单ID',
+  dish_id BIGINT NOT NULL COMMENT '菜品ID',
+  dish_name VARCHAR(100) NOT NULL COMMENT '菜品名称',
+  quantity INT NOT NULL COMMENT '数量',
+  unit_price DECIMAL(10,2) NOT NULL COMMENT '单价',
+  subtotal DECIMAL(10,2) NOT NULL COMMENT '小计',
+  created_at DATETIME DEFAULT NULL,
+  deleted TINYINT DEFAULT 0,
+  INDEX idx_order_id (order_id),
+  INDEX idx_dish_id (dish_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='销售订单明细表';
+
+-- 补充报表查看权限
+INSERT IGNORE INTO `sys_permission` (`id`, `parent_id`, `permission_code`, `permission_name`, `type`, `path`, `icon`, `sort_order`) VALUES
+(50, 6, 'report:list', '查看报表', 2, NULL, NULL, 1);
+
+-- 为超级管理员和门店管理员分配报表权限
+INSERT IGNORE INTO `sys_role_permission` (`role_id`, `permission_id`) VALUES
+(1, 50), (2, 50);
+
+-- ========================================
+-- Week 7: 销售Mock数据（存储过程生成）
+-- ========================================
+
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS generate_sales_mock_data$$
+
+CREATE PROCEDURE generate_sales_mock_data()
+BEGIN
+    DECLARE v_day INT DEFAULT 0;
+    DECLARE v_store_id INT;
+    DECLARE v_orders_per_store INT;
+    DECLARE v_order_idx INT;
+    DECLARE v_order_id BIGINT;
+    DECLARE v_order_no VARCHAR(32);
+    DECLARE v_total DECIMAL(10,2);
+    DECLARE v_item_count INT;
+    DECLARE v_payment VARCHAR(20);
+    DECLARE v_order_time DATETIME;
+    DECLARE v_item_idx INT;
+    DECLARE v_dish_id INT;
+    DECLARE v_quantity INT;
+    DECLARE v_unit_price DECIMAL(10,2);
+    DECLARE v_subtotal DECIMAL(10,2);
+    DECLARE v_dish_name VARCHAR(100);
+    DECLARE v_rand_payment INT;
+
+    -- 清除旧数据（如果存在）
+    DELETE FROM t_sales_order_item WHERE tenant_id = 1;
+    DELETE FROM t_sales_order WHERE tenant_id = 1;
+
+    SET v_day = 0;
+    WHILE v_day < 30 DO
+        SET v_store_id = 1;
+        WHILE v_store_id <= 3 DO
+            -- 每天每个门店 7-9 单
+            SET v_orders_per_store = 7 + FLOOR(RAND() * 3);
+            SET v_order_idx = 0;
+            WHILE v_order_idx < v_orders_per_store DO
+                -- 生成订单号
+                SET v_order_no = CONCAT('SO', DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL (29 - v_day) DAY), '%Y%m%d'),
+                                        LPAD(v_store_id, 2, '0'), LPAD(v_order_idx + 1, 3, '0'));
+                -- 随机下单时间（当天 9:00 - 21:00）
+                SET v_order_time = DATE_ADD(
+                    DATE_SUB(CURDATE(), INTERVAL (29 - v_day) DAY),
+                    INTERVAL (9 * 3600 + FLOOR(RAND() * 12 * 3600)) SECOND
+                );
+                -- 随机支付方式
+                SET v_rand_payment = FLOOR(RAND() * 3);
+                SET v_payment = CASE v_rand_payment WHEN 0 THEN 'cash' WHEN 1 THEN 'wechat' ELSE 'alipay' END;
+                -- 每个订单 1-5 个明细
+                SET v_item_count = 1 + FLOOR(RAND() * 5);
+                SET v_total = 0;
+
+                -- 先插入订单（金额后面更新）
+                INSERT INTO t_sales_order (tenant_id, store_id, order_no, total_amount, item_count, payment_method, order_time, created_at, updated_at)
+                VALUES (1, v_store_id, v_order_no, 0, v_item_count, v_payment, v_order_time, v_order_time, v_order_time);
+                SET v_order_id = LAST_INSERT_ID();
+
+                -- 生成明细
+                SET v_item_idx = 0;
+                WHILE v_item_idx < v_item_count DO
+                    SET v_dish_id = 1 + FLOOR(RAND() * 10);
+                    SET v_dish_name = CASE v_dish_id
+                        WHEN 1 THEN '宫保鸡丁'
+                        WHEN 2 THEN '鱼香肉丝'
+                        WHEN 3 THEN '麻婆豆腐'
+                        WHEN 4 THEN '红烧排骨'
+                        WHEN 5 THEN '清蒸鲈鱼'
+                        WHEN 6 THEN '番茄炒蛋'
+                        WHEN 7 THEN '回锅肉'
+                        WHEN 8 THEN '水煮牛肉'
+                        WHEN 9 THEN '蒜蓉西兰花'
+                        ELSE '酸辣土豆丝'
+                    END;
+                    SET v_unit_price = CASE v_dish_id
+                        WHEN 1 THEN 38.00
+                        WHEN 2 THEN 36.00
+                        WHEN 3 THEN 28.00
+                        WHEN 4 THEN 58.00
+                        WHEN 5 THEN 78.00
+                        WHEN 6 THEN 22.00
+                        WHEN 7 THEN 42.00
+                        WHEN 8 THEN 68.00
+                        WHEN 9 THEN 26.00
+                        ELSE 18.00
+                    END;
+                    SET v_quantity = 1 + FLOOR(RAND() * 3);
+                    SET v_subtotal = v_unit_price * v_quantity;
+                    SET v_total = v_total + v_subtotal;
+
+                    INSERT INTO t_sales_order_item (tenant_id, order_id, dish_id, dish_name, quantity, unit_price, subtotal, created_at)
+                    VALUES (1, v_order_id, v_dish_id, v_dish_name, v_quantity, v_unit_price, v_subtotal, v_order_time);
+
+                    SET v_item_idx = v_item_idx + 1;
+                END WHILE;
+
+                -- 更新订单总金额
+                UPDATE t_sales_order SET total_amount = v_total WHERE id = v_order_id;
+
+                SET v_order_idx = v_order_idx + 1;
+            END WHILE;
+            SET v_store_id = v_store_id + 1;
+        END WHILE;
+        SET v_day = v_day + 1;
+    END WHILE;
+END$$
+
+DELIMITER ;
+
+CALL generate_sales_mock_data();
+DROP PROCEDURE IF EXISTS generate_sales_mock_data;
+
+-- 后续周次将在此添加表结构

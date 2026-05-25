@@ -47,6 +47,8 @@ public class CacheConfig {
         cacheConfigurations.put("dish", defaultConfig.entryTtl(Duration.ofMinutes(30)));
         cacheConfigurations.put("dishCategory", defaultConfig.entryTtl(Duration.ofHours(2)));
         cacheConfigurations.put("inventory", defaultConfig.entryTtl(Duration.ofMinutes(30)));
+        cacheConfigurations.put("report", defaultConfig.entryTtl(Duration.ofMinutes(30)));
+        cacheConfigurations.put("reportOverview", defaultConfig.entryTtl(Duration.ofMinutes(10)));
 
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(defaultConfig)

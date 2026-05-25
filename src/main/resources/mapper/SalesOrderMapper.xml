@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.pinenuts.mapper.SalesOrderMapper">
+
+    <select id="getDailyRevenue" resultType="com.pinenuts.dto.report.DailyRevenueResponse">
+        SELECT DATE(order_time) AS date,
+               SUM(total_amount) AS revenue,
+               COUNT(*) AS orderCount
+        FROM t_sales_order
+        WHERE tenant_id = #{tenantId}
+          AND deleted = 0
+          AND order_time &gt;= #{startDate}
+          AND order_time &lt; DATE_ADD(#{endDate}, INTERVAL 1 DAY)
+          <if test="storeId != null">
+              AND store_id = #{storeId}
+          </if>
+        GROUP BY DATE(order_time)
+        ORDER BY date
+    </select>
+
+    <select id="getStoreRanking" resultType="com.pinenuts.dto.report.StoreRankingResponse">
+        SELECT so.store_id AS storeId,
+               s.store_name AS storeName,
+               SUM(so.total_amount) AS totalRevenue,
+               COUNT(*) AS orderCount
+        FROM t_sales_order so
+        LEFT JOIN t_store s ON so.store_id = s.id
+        WHERE so.tenant_id = #{tenantId}
+          AND so.deleted = 0
+          AND so.order_time &gt;= #{startDate}
+          AND so.order_time &lt; DATE_ADD(#{endDate}, INTERVAL 1 DAY)
+        GROUP BY so.store_id, s.store_name
+        ORDER BY totalRevenue DESC
+        LIMIT #{topN}
+    </select>
+
+    <select id="getDishSalesTop" resultType="com.pinenuts.dto.report.DishSalesTopResponse">
+        SELECT soi.dish_id AS dishId,
+               soi.dish_name AS dishName,
+               SUM(soi.quantity) AS quantity,
+               SUM(soi.subtotal) AS revenue
+        FROM t_sales_order_item soi
+        INNER JOIN t_sales_order so ON soi.order_id = so.id
+        WHERE so.tenant_id = #{tenantId}
+          AND so.deleted = 0
+          AND soi.deleted = 0
+          AND so.order_time &gt;= #{startDate}
+          AND so.order_time &lt; DATE_ADD(#{endDate}, INTERVAL 1 DAY)
+          <if test="storeId != null">
+              AND so.store_id = #{storeId}
+          </if>
+        GROUP BY soi.dish_id, soi.dish_name
+        ORDER BY quantity DESC
+        LIMIT #{topN}
+    </select>
+
+</mapper>
